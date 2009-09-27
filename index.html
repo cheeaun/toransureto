@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<title>Toransureto</title>
+<link rel="stylesheet" href="http://github.com/cheeaun/cacss/raw/master/ca.css">
+<style>
+body{
+	text-align: center;
+}
+form{
+	font-size: 3em;
+	margin: 0 0 1em;
+}
+form label{
+	width: 6em;
+	display: inline-block;
+	margin: 0 1em 0 0;
+	text-align: right;
+	font-size: .6em;
+}
+form input.text{
+	width: 20em;
+}
+form input.button{
+	margin-left: 4em;
+	width: 20em;
+}
+</style>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script>
+$(function(){
+	var transForm = $('#transForm');
+	var textEl = $('#text').focus().select();
+	var japaneseEl = $('#japanese');
+	var romajiEl = $('#romaji');
+	var toransuretoEl = $('#toransureto');
+	
+	transForm.submit(function(){
+		var val = textEl.val();
+		if (val === ''){
+			textEl.focus();
+		} else {
+			toransuretoEl.attr('disabled', true);
+			document.location.hash = val;
+			$.ajax({
+				url: '/trans',
+				data: {q: val},
+				success: function(data){
+					toransuretoEl.attr('disabled', false);
+					if (!data) return;
+					japaneseEl.val(data.japanese);
+					romajiEl.val(data.romaji);
+				},
+				error: function(){
+					toransuretoEl.attr('disabled', false);
+				},
+				dataType: 'json'
+			})
+		}
+		return false;
+	});
+	
+	var hash = document.location.hash;
+	if (hash){
+		hash = hash.slice(1);
+		textEl.val(hash);
+		transForm.submit();
+	}
+});
+</script>
+<header>
+	<h1>Toransureto<br>Any Language &rarr; Japanese &rarr; Romaji</h1>
+</header>
+<form id="transForm">
+<ul class="fields">
+	<li><label for="text">Your Text</label><input type="text" id="text" class="text"></li>
+	<li><label for="japanese">Japanese</label><input type="text" id="japanese" class="text" readonly></li>
+	<li><label for="romaji">Romaji</label><input type="text" id="romaji" class="text" readonly></li>
+</ul>
+<input type="submit" value="Toransureto!" class="button" id="toransureto" title="Translate!">
+</form>
+<footer>
+	<p>Powered by <a href="http://code.google.com/apis/ajaxlanguage/">Google Translation API</a> and <a href="http://romaji.udp.jp/">http://romaji.udp.jp/</a>.<br>
+	You might like these sites as well:
+	<a href="http://kanjidict.stc.cx/hiragana.php">Romaji to hiragana converter</a>,
+	<a href="http://www.romaji.org/">Romaji Translator</a>,
+	<a href="http://www.cs.technion.ac.il/~danken/kanjidic.html">Romaji to Kanji</a>, and
+	<a href="http://www.online-languages.info/_ud2/dictionary.php?l1=english&l2=japanese_romaji">English to Japanese Romaji dictionary</a></p>
+</footer>
