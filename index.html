@@ -5,6 +5,12 @@
 body{
 	text-align: center;
 }
+p.error{
+	color: red;
+	background-color: transparent;
+	margin: 0;
+	display: none;
+}
 form{
 	font-size: 3em;
 	margin: 0 0 1em;
@@ -23,17 +29,30 @@ form input.button{
 	margin-left: 4em;
 	width: 20em;
 }
+#langContainer{
+	margin: auto;
+	line-height: 0;
+	width: 24.4em;
+	text-align: right;
+}
+#lang{
+	margin-left: 4em;
+	font-size: .5em;
+}
 </style>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
 <script>
 $(function(){
+	var errorEl = $('p.error');
 	var transForm = $('#transForm');
 	var textEl = $('#text').focus().select();
+	var langEl = $('#lang');
 	var japaneseEl = $('#japanese');
 	var romajiEl = $('#romaji');
 	var toransuretoEl = $('#toransureto');
 	
 	transForm.submit(function(){
+		errorEl.hide();
 		var val = textEl.val();
 		if (val === ''){
 			textEl.focus();
@@ -42,15 +61,17 @@ $(function(){
 			document.location.hash = val;
 			$.ajax({
 				url: '/trans',
-				data: {q: val},
+				data: {q: val, lang: langEl.val()},
 				success: function(data){
 					toransuretoEl.attr('disabled', false);
 					if (!data) return;
 					japaneseEl.val(data.japanese);
 					romajiEl.val(data.romaji);
+					if (data.detectedLanguage) langEl.val(data.detectedLanguage);
 				},
 				error: function(){
 					toransuretoEl.attr('disabled', false);
+					errorEl.show();
 				},
 				dataType: 'json'
 			})
@@ -69,9 +90,20 @@ $(function(){
 <header>
 	<h1>Toransureto<br>Any Language &rarr; Japanese &rarr; Romaji</h1>
 </header>
+<p class="error">Oops, something wrong happened :)</p>
 <form id="transForm">
 <ul class="fields">
-	<li><label for="text">Your Text</label><input type="text" id="text" class="text"></li>
+	<li><label for="text">Your Text</label><input type="text" id="text" class="text">
+		{% if languages %}
+			<div id="langContainer">
+			<select id="lang">
+				{% for l in languages %}
+					<option value="{{ l.code }}">{{ l.lang }}</option>
+				{% endfor %}
+			</select>
+			</div>
+		{% endif %}
+	</li>
 	<li><label for="japanese">Japanese</label><input type="text" id="japanese" class="text" readonly></li>
 	<li><label for="romaji">Romaji</label><input type="text" id="romaji" class="text" readonly></li>
 </ul>
