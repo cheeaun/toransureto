@@ -53,44 +53,54 @@ class TranslateHandler(webapp.RequestHandler):
     url2 = 'http://romaji.udp.jp/romaji.cgi'
     
     if q:
-      try:
-        result = urlfetch.fetch(url1, deadline=10)
-        if result.status_code == 200:
-          content = simplejson.loads(result.content)
-          if content['responseData'] and content['responseStatus'] is 200:
-            try:
-              response['detectedLanguage'] = content['responseData']['detectedSourceLanguage']
-            except:
-              pass
-            response['japanese'] = content['responseData']['translatedText']
-            
-            try:
-              params2['text'] = response['japanese'].encode('utf-8')
-              result2 = urlfetch.fetch(url2, payload=urlencode(params2), method=urlfetch.POST, headers={'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}, deadline=10)
-              if result2.status_code == 200:
-                content = parseString(result2.content)
-                text = []
-                rts = content.getElementsByTagName('rt')
-                for rt in rts:
-                  nodelist = rt.childNodes
-                  for node in nodelist:
-                    if node.nodeType == node.TEXT_NODE and node.data:
-                      text += [node.data]
-                response['romaji'] = ' '.join(text)
-              else:
-                self.error(result.status_code)
-            except:
-              self.error(500)
+      if not lang: lang = 'auto' # make sure 'q' won't have same value as 'lang'
+      json = memcache.get(lang + q)
+      
+      if json is None:
+        try:
+          result = urlfetch.fetch(url1, deadline=10)
+          if result.status_code == 200:
+            content = simplejson.loads(result.content)
+            if content['responseData'] and content['responseStatus'] is 200:
+              try:
+                response['detectedLanguage'] = content['responseData']['detectedSourceLanguage']
+              except:
+                pass
+              response['japanese'] = content['responseData']['translatedText']
+              
+              try:
+                params2['text'] = response['japanese'].encode('utf-8')
+                result2 = urlfetch.fetch(url2, payload=urlencode(params2), method=urlfetch.POST, headers={'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}, deadline=10)
+                if result2.status_code == 200:
+                  content = parseString(result2.content)
+                  text = []
+                  rts = content.getElementsByTagName('rt')
+                  for rt in rts:
+                    nodelist = rt.childNodes
+                    for node in nodelist:
+                      if node.nodeType == node.TEXT_NODE and node.data:
+                        text += [node.data]
+                  response['romaji'] = ' '.join(text)
+                  
+                  json = simplejson.dumps(response, indent=4, ensure_ascii=False)
+                  memcache.add(lang + q, json, 86400) # 1 day
+                  
+                else:
+                  self.error(result.status_code)
+              except:
+                self.error(500)
+            else:
+              self.error(content['responseStatus'])
           else:
-            self.error(content['responseStatus'])
-        else:
-          self.error(result.status_code)
-      except:
-        self.error(500)
+            self.error(result.status_code)
+        except:
+          self.error(500)
     
-    json = simplejson.dumps(response, indent=4, ensure_ascii=False)
-    self.response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
-    self.response.out.write(json)
+      self.response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+      self.response.out.write(json)
+      
+    else:
+      self.redirect('/')
 
 def main():
   application = webapp.WSGIApplication([
