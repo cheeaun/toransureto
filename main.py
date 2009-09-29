@@ -3,6 +3,7 @@
 import os
 import wsgiref.handlers
 from cgi import escape
+from re import compile
 from urllib import urlencode, quote
 from xml.dom.minidom import parseString
 from django.utils import simplejson
@@ -29,6 +30,8 @@ class TranslateHandler(webapp.RequestHandler):
   def get(self):
     q = escape(self.request.get('q'))
     lang = escape(self.request.get('lang'))
+    callback = escape(self.request.get('callback'))
+    
     response = {
       'text': q,
       'detectedLanguage': None,
@@ -95,12 +98,20 @@ class TranslateHandler(webapp.RequestHandler):
             self.error(result.status_code)
         except:
           self.error(500)
+
+      if callback:
+        exp = compile('^[A-Za-z_$][A-Za-z0-9_$]*?$')
+        match = exp.match(callback)
+        if match: json = callback + '(' + json + ')'
     
       self.response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
       self.response.out.write(json)
       
     else:
       self.redirect('/')
+      
+  def post(self):
+    self.get()
 
 def main():
   application = webapp.WSGIApplication([
