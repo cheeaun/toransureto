@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import os
+import re
 import wsgiref.handlers
 from cgi import escape
-from re import compile
 from urllib import urlencode
 from django.utils import simplejson
 from google.appengine.api import urlfetch
@@ -122,7 +122,7 @@ class TranslateHandler(webapp.RequestHandler):
                 if result2.status_code == 200:
                   stainer = SoupStrainer(id='conversion')
                   soup = BeautifulSoup(result2.content, parseOnlyThese=stainer)
-                  text = soup.contents[0].string.replace('\n', '').strip()
+                  text = ' '.join(soup.contents[0].string.replace('\n', '').split())
                   response['romaji'] = text
                   
                   json = simplejson.dumps(response, indent=4, ensure_ascii=False)
@@ -140,7 +140,7 @@ class TranslateHandler(webapp.RequestHandler):
           self.error(500)
 
       if callback:
-        exp = compile('^[A-Za-z_$][A-Za-z0-9_$]*?$')
+        exp = re.compile('^[A-Za-z_$][A-Za-z0-9_$]*?$')
         match = exp.match(callback)
         if match: json = callback + '(' + json + ')'
     
